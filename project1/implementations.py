@@ -35,81 +35,63 @@ def compute_gradient(y, tx, w):
 
 def mean_squared_error_gd(y, tx, initial_w, max_iters, gamma):
 	"""Train linear regression with gradient descent.
-    Args:
-        y: shape=(N, )
-        tx: shape=(N,2)
-        initial_w: shape=(2, ). The initial guess (or the initialization) for the model parameters
-        max_iters: a scalar denoting the total number of iterations of GD
-        gamma: a scalar denoting the stepsize
 
-    Returns:
-        losses: a list of length max_iters containing the loss value (scalar) for each iteration of GD
-        ws: a list of length max_iters containing the model parameters as numpy arrays of shape (2, ), for each iteration of GD
-    """
-	# Define parameters to store w and loss
-	ws = [initial_w]
-	losses = []
+	Args:
+		y: shape=(N, )
+		tx: shape=(N, D)
+		initial_w: shape=(D, ). The initial guess (or the initialization) for the model parameters
+		max_iters: a scalar denoting the total number of iterations of GD
+		gamma: a scalar denoting the stepsize
+
+	Returns:
+		w: the last weight vector, shape=(D, )
+		loss: the MSE (scalar) corresponding to w
+	"""
 	w = initial_w
 	for n_iter in range(max_iters):
 		grad = compute_gradient(y, tx, w)   # 1. sentir la pente
-		loss = mse(y, tx, w)       # (pour suivre l'altitude)
 		w = w - gamma * grad                # 2. faire un pas vers le bas
-		# store w and loss
-		ws.append(w)
-		losses.append(loss)
-		print(
-			"GD iter. {bi}/{ti}: loss={l}, w0={w0}, w1={w1}".format(
-				bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]
-			)
-		)
-	return losses, ws
+	loss = mse(y, tx, w)
+	return w, loss
 
 
 def compute_stoch_gradient(y, tx, w):
     """Compute a stochastic gradient at w from just few examples n and their corresponding y_n labels.
 
     Args:
-        y: shape=(N, )
-        tx: shape=(N,2)
-        w: shape=(2, ). The vector of model parameters.
+        y: shape=(B, )
+        tx: shape=(B, D)
+        w: shape=(D, ). The vector of model parameters.
 
     Returns:
-        An array of shape (2, ) (same shape as w), containing the stochastic gradient of the loss at w.
+        An array of shape (D, ) (same shape as w), containing the stochastic gradient of the loss at w.
     """
     e = y - tx @ w
     return -tx.T @ e / len(y)
 
 
 def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma):
-	"""The Stochastic Gradient Descent algorithm (SGD).
-    Args:
-        y: shape=(N, )
-        tx: shape=(N,2)
-        initial_w: shape=(2, ). The initial guess (or the initialization) for the model parameters
-        batch_size: a scalar denoting the number of data points in a mini-batch used for computing the stochastic gradient
-        max_iters: a scalar denoting the total number of iterations of SGD
-        gamma: a scalar denoting the stepsize
+	"""Train linear regression with stochastic gradient descent (batch size 1).
 
-    Returns:
-        losses: a list of length max_iters containing the loss value (scalar) for each iteration of SGD
-        ws: a list of length max_iters containing the model parameters as numpy arrays of shape (2, ), for each iteration of SGD
-    """
-	ws = [initial_w]
-	losses = []
+	Args:
+		y: shape=(N, )
+		tx: shape=(N, D)
+		initial_w: shape=(D, ). The initial guess (or the initialization) for the model parameters
+		max_iters: a scalar denoting the total number of iterations of SGD
+		gamma: a scalar denoting the stepsize
+
+	Returns:
+		w: the last weight vector, shape=(D, )
+		loss: the MSE (scalar) corresponding to w
+	"""
 	w = initial_w
+	N = len(y)
 	for n_iter in range(max_iters):
-		for minibatch_y, minibatch_tx in batch_iter(y, tx, batch_size=batch_size, num_batches=1):
-			grad = compute_stoch_gradient(minibatch_y, minibatch_tx, w)  # pente d'1 personne
-			w = w - gamma * grad                                         # un pas
-			loss = mse(y, tx, w)   # seulement pour afficher le progrès
-			ws.append(w)
-			losses.append(loss)
-		print(
-            "SGD iter. {bi}/{ti}: loss={l}, w0={w0}, w1={w1}".format(
-                bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]
-            )
-        )
-		return losses, ws
+		i = np.random.randint(N)                                        # tirer 1 personne au hasard
+		grad = compute_stoch_gradient(y[i:i+1], tx[i:i+1], w)   # pente d'1 personne
+		w = w - gamma * grad                                            # un pas
+	loss = mse(y, tx, w)
+	return w, loss
 
 
 def least_squares(y, tx):
@@ -152,11 +134,89 @@ def ridge_regression(y, tx, lambda_):
 	return w, mse_res
 
 
+def sigmoid(t):
+	"""Apply the sigmoid function on t.
+
+	Args:
+		t: scalar or numpy array
+
+	Returns:
+		scalar or numpy array
+	"""
+	return 1.0 / (1.0 + np.exp(-t))
+
+
+def logistic_loss(y, tx, w):
+	"""Compute the cost by negative log likelihood.
+
+	Args:
+		y: shape=(N, ), labels in {0, 1}
+		tx: shape=(N, D)
+		w: shape=(D, )
+
+	Returns:
+		a non-negative loss (scalar)
+	"""
+	z = tx @ w
+	# log(1 + exp(z)) computed in a numerically stable way
+	return np.mean(np.logaddexp(0, z) - y * z)
+
+
+def logistic_gradient(y, tx, w):
+	"""Compute the gradient of the logistic loss.
+
+	Args:
+		y: shape=(N, ), labels in {0, 1}
+		tx: shape=(N, D)
+		w: shape=(D, )
+
+	Returns:
+		a vector of shape (D, )
+	"""
+	return tx.T @ (sigmoid(tx @ w) - y) / len(y)
+
+
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
-	"""Train logistic regression with gradient descent."""
-	raise NotImplementedError
+	"""Train logistic regression with gradient descent.
+
+	Args:
+		y: shape=(N, ), labels in {0, 1}
+		tx: shape=(N, D)
+		initial_w: shape=(D, ). The initial guess for the model parameters
+		max_iters: a scalar denoting the total number of iterations of GD
+		gamma: a scalar denoting the stepsize
+
+	Returns:
+		w: the last weight vector, shape=(D, )
+		loss: the logistic loss (scalar) corresponding to w
+	"""
+	w = initial_w
+	for n_iter in range(max_iters):
+		grad = logistic_gradient(y, tx, w)
+		w = w - gamma * grad
+	loss = logistic_loss(y, tx, w)
+	return w, loss
 
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
-	"""Train regularized logistic regression with gradient descent."""
-	raise NotImplementedError
+	"""Train regularized logistic regression with gradient descent.
+
+	Args:
+		y: shape=(N, ), labels in {0, 1}
+		tx: shape=(N, D)
+		lambda_: scalar, the regularization parameter
+		initial_w: shape=(D, ). The initial guess for the model parameters
+		max_iters: a scalar denoting the total number of iterations of GD
+		gamma: a scalar denoting the stepsize
+
+	Returns:
+		w: the last weight vector, shape=(D, )
+		loss: the logistic loss (scalar) corresponding to w, without the penalty term
+	"""
+	w = initial_w
+	for n_iter in range(max_iters):
+		# gradient of lambda * ||w||^2 is 2 * lambda * w
+		grad = logistic_gradient(y, tx, w) + 2 * lambda_ * w
+		w = w - gamma * grad
+	loss = logistic_loss(y, tx, w)
+	return w, loss
