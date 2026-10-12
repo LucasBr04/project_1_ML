@@ -36,3 +36,7 @@ yarn-error.log*
 # Python
 __pycache__/
 *.pyc
+
+# Données (trop grosses pour GitHub)
+data/*.csv
+data/*.npy

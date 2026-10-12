@@ -13,6 +13,7 @@ from implementations import (
     reg_logistic_regression,
     ridge_regression,
 )
+from preprocessing import clean_and_standardize, load_feature_names
 
 
 def train_model(y_train, x_train, method="least_squares"):
@@ -68,8 +69,10 @@ def main():
     output_dir.mkdir(exist_ok=True)
 
     x_train, x_test, y_train, _, test_ids = load_csv_data(data_dir)
-    weights, loss = train_model(y_train, x_train, method="least_squares")
-    predictions = make_predictions(x_test, weights)
+    names = load_feature_names(data_dir)
+    tx_train, tx_test = clean_and_standardize(x_train, x_test, names)
+    weights, loss = train_model(y_train, tx_train, method="least_squares")
+    predictions = make_predictions(tx_test, weights)
     create_csv_submission(test_ids, predictions, output_dir / "submission.csv")
     plot_results({"least_squares": loss}, output_dir / "losses.png")
 
