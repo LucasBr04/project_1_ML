@@ -16,13 +16,39 @@ from implementations import (
 from preprocessing import clean_and_standardize, load_feature_names
 from validation import best_threshold, f1_score, split_train_validation
 
+# Choices of the pipeline (chosen on the validation set, F1 in comments)
+METHOD = "logistic_regression"  # ridge 0.425 -> logistic 0.434
+ONE_HOT = True  # one-hot encode the categorical columns (+0.011 F1)
+FIX_CODES = True  # BRFSS codes of continuous columns (88 -> 0, 9999 -> NaN...)
+CLIP_QUANTILE = 0.99  # clip outliers to the 1st/99th percentile
+GAMMA = 1.0  # step size of logistic GD: 1/L = 0.51, must stay < 2/L = 1.02
+MAX_ITERS = 1000  # validation F1 no longer changes after ~500 iterations
+LAMBDA = 1e-5  # regularization of ridge_regression / reg_logistic_regression
+
+
+def preprocess(x_a, x_b, names):
+    """Clean x_a and x_b with the statistics of x_a and the choices above."""
+    return clean_and_standardize(
+        x_a,
+        x_b,
+        names,
+        one_hot=ONE_HOT,
+        fix_codes=FIX_CODES,
+        clip_quantile=CLIP_QUANTILE,
+    )
+
 
 def train_model(y_train, x_train, method="least_squares"):
-    """Call one of the methods from implementations.py."""
+    """Call one of the methods from implementations.py.
+
+    y_train is in {-1, 1}; it is converted to {0, 1} for logistic regression.
+    """
     initial_w = np.zeros(x_train.shape[1])
-    max_iters = 1000
-    gamma = 0.01
-    lambda_ = 0.01
+    max_iters = MAX_ITERS
+    gamma = GAMMA
+    lambda_ = LAMBDA
+    if method in ("logistic_regression", "reg_logistic_regression"):
+        y_train = (y_train + 1) / 2
 
     if method == "mean_squared_error_gd":
         return mean_squared_error_gd(y_train, x_train, initial_w, max_iters, gamma)
@@ -74,8 +100,8 @@ def main():
 
     # 1. estimate the quality of the model: train on 80%, evaluate on 20%
     x_tr, x_val, y_tr, y_val = split_train_validation(y_train, x_train)
-    tx_tr, tx_val = clean_and_standardize(x_tr, x_val, names)
-    weights, _ = train_model(y_tr, tx_tr, method="least_squares")
+    tx_tr, tx_val = preprocess(x_tr, x_val, names)
+    weights, _ = train_model(y_tr, tx_tr, method=METHOD)
     # the threshold is chosen on the training part only, not on the validation
     threshold = best_threshold(y_tr, tx_tr @ weights)
     f1_default = f1_score(y_val, make_predictions(tx_val, weights))
@@ -84,15 +110,15 @@ def main():
     print(f"validation F1 = {f1:.4f} with threshold {threshold:.3f}")
 
     # 2. final model: train on all the training data, predict the test set
-    tx_train, tx_test = clean_and_standardize(x_train, x_test, names)
-    weights, loss = train_model(y_train, tx_train, method="least_squares")
+    tx_train, tx_test = preprocess(x_train, x_test, names)
+    weights, loss = train_model(y_train, tx_train, method=METHOD)
     threshold = best_threshold(y_train, tx_train @ weights)
     predictions = make_predictions(tx_test, weights, threshold)
     print(
         f"final threshold = {threshold:.3f}, {np.mean(predictions == 1):.1%} of the test set predicted sick"
     )
     create_csv_submission(test_ids, predictions, output_dir / "submission.csv")
-    plot_results({"least_squares": loss}, output_dir / "losses.png")
+    plot_results({METHOD: loss}, output_dir / "losses.png")
 
 
 if __name__ == "__main__":
