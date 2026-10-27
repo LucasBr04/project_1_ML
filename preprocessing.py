@@ -176,8 +176,8 @@ def clean_and_standardize(
         mean, std = x_train.mean(axis=0), x_train.std(axis=0)
         z_train, z_test = (x_train - mean) / std, (x_test - mean) / std
         powers = range(2, poly_degree + 1)
-        x_train = np.c_[x_train, *[z_train**p for p in powers]]
-        x_test = np.c_[x_test, *[z_test**p for p in powers]]
+        x_train = np.c_[x_train, [z_train**p for p in powers]]
+        x_test = np.c_[x_test, [z_test**p for p in powers]]
 
     # 4. standardize: mean 0 and std 1 for every column
     mean = x_train.mean(axis=0)
