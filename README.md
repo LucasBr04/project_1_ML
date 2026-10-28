@@ -38,7 +38,6 @@ The course grading environment is separate and is described in `grading_tests/en
 │       ├── x_train.csv              # Used by run.ipynb
 │       ├── y_train.csv
 │       ├── x_test.csv
-│       └── sample_submission.csv
 ├── outputs/                         # Submission CSVs and logistic diagnostic figures
 ├── grading_tests/                   # Public course tests and their instructions
 ├── latex-example-paper/             # Course report template
@@ -137,23 +136,10 @@ Run `Least_Squares_Ridge_BRFSS.ipynb` from a fresh kernel, executing all cells i
 
 The notebook first splits labeled observations into 80% training and 20% validation using `np.random.seed(42)`. The initial split is not stratified. Preprocessing is fitted on training data only. The validation portion is then split into two stratified halves with seed 43: 32,814 calibration observations and 32,813 evaluation observations.
 
-For Least Squares, `pivoted_qr_numpy()` selects independent columns using NumPy QR reduction followed by Householder reflections with column pivoting. Numerical rank is estimated using singular values and a tolerance based on the original matrix dimensions. The same column selection is applied to calibration and evaluation data. This implementation does not require SciPy.
+For Least Squares, `pivoted_qr_numpy()` selects independent columns using NumPy QR reduction followed by Householder reflections with column pivoting. Numerical rank is estimated using singular values and a tolerance based on the original matrix dimensions. The same column selection is applied to calibration and evaluation data. 
 
 For Ridge, all preprocessed columns are retained. The notebook evaluates 30 lambda values from `np.logspace(-6, 2, 30)`. It reuses the training Gram matrix and right-hand side, solves the regularized normal equations for each lambda, and jointly selects lambda and threshold by calibration F1. Evaluation data are used after selection. No cross-validation is performed in this notebook.
 
-### Recorded independent evaluation results
-
-| Model | Threshold | F1 | Precision | Recall | Accuracy |
-|---|---|---:|---:|---:|---:|
-| Always-negative baseline | — | 0.0000 | 0.0000 | 0.0000 | 0.9101 |
-| Least Squares | 0 | 0.0054 | 0.7273 | 0.0027 | 0.9102 |
-| Least Squares | Calibrated | 0.4089 | 0.3280 | 0.5427 | 0.8589 |
-| Ridge | 0 | 0.0047 | 0.7000 | 0.0024 | 0.9102 |
-| Ridge | Calibrated | 0.4079 | 0.3235 | 0.5519 | 0.8560 |
-
-The selected Ridge lambda is approximately `1.268961e-5`, with threshold `-0.582888`; the LS threshold is approximately `-0.576543`. These are local evaluation results, not competition scores.
-
-Tables are displayed as aligned text using lists of dictionaries, and figures are displayed inline. The current notebook does **not** save figures, export result tables, retrain on the full dataset, or create LS/Ridge submission CSVs. Although the loader reads the test CSV, test observations are not used in fitting, calibration or evaluation.
 
 ## SGD experiments
 
@@ -176,16 +162,3 @@ In the current `run.ipynb`, preprocessing is fitted on all labeled data before s
 The report discussed alongside this project describes a final logistic model with one-hot preprocessing and a separate calibration/evaluation protocol. The current `run.ipynb` instead uses default preprocessing and regularized logistic regression with the cross-validation procedure documented above. Its saved outputs do not establish reproduction of the report's logistic F1 of 0.4337 or the reported competition score. Exact reproduction of the best competition CSV remains to be checked against that submitted file.
 
 The code and saved notebook outputs were inspected for this README. The NumPy LS/Ridge implementation was previously checked on the supplied data against the archived result tables, reproducing their metrics with numerical differences around `2e-11` or smaller. The current full logistic cross-validation workflow and public grading tests were not rerun for this documentation update. Existing notebook outputs may reflect earlier execution states.
-
-## Public course tests
-
-Follow `grading_tests/INSTRUCTIONS.md` and use the dedicated grading environment:
-
-```bash
-conda env create --file grading_tests/environment.yml --name project1-grading
-conda activate project1-grading
-cd grading_tests
-pytest --github_link /absolute/path/to/project .
-```
-
-Replace the path with the project root. A repository URL can be supplied instead. When using a local directory, the GitHub URL check may fail as described in the test instructions. Test-environment packages are not model dependencies, and passing the public tests does not establish full implementation correctness or submission reproducibility.
