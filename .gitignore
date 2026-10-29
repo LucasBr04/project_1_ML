@@ -42,3 +42,6 @@ data/*.csv
 data/*.npy
 data/
 project1/
+
+# Jupyter
+.ipynb_checkpoints/

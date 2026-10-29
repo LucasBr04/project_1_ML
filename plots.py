@@ -69,7 +69,9 @@ def plot_cv_lambda(results, path=None):
     plt.errorbar(x, means, yerr=stds, marker="o", capsize=4)
     plt.xscale("log")
     if (lambdas == 0).any():
-        plt.annotate("λ = 0", (zero_pos, means[0]), textcoords="offset points", xytext=(5, 8))
+        plt.annotate(
+            "λ = 0", (zero_pos, means[0]), textcoords="offset points", xytext=(5, 8)
+        )
     plt.xlabel("lambda")
     plt.ylabel("F1 moyen sur les plis de validation")
     _finish(path, "Cross validation de la régularisation L2")
